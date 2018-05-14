@@ -24,7 +24,7 @@ import java.util.List;
  */
 public interface RestApi {
   String API_BASE_URL =
-      "https://github.com/android10/Sample-Data/blob/master/Android-CleanArchitecture/";
+      "https://raw.githubusercontent.com/android10/Sample-Data/master/Android-CleanArchitecture/";
 
   /** Api url for getting all users */
   String API_URL_GET_USER_LIST = API_BASE_URL + "users.json";
