@@ -19,8 +19,19 @@ import android.widget.ImageView;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * Simple implementation of {@link android.widget.ImageView} with extended features like setting an
@@ -217,14 +228,54 @@ public class AutoLoadImageView extends ImageView {
      */
     void download(String imageUrl, Callback callback) {
       try {
-        final URLConnection conn = new URL(imageUrl).openConnection();
+        trustAllHosts();
+
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("168.219.61.252", 8080));
+        final HttpsURLConnection conn = (HttpsURLConnection) new URL(imageUrl).openConnection(proxy);
+
+        final HostnameVerifier DO_NOT_VERIFY = new HostnameVerifier() {
+          public boolean verify(String hostname, SSLSession session) {
+            return true;
+          }
+        };
+
+        conn.setHostnameVerifier(DO_NOT_VERIFY);
         conn.connect();
         final Bitmap bitmap = BitmapFactory.decodeStream(conn.getInputStream());
         if (callback != null) {
           callback.onImageDownloaded(bitmap);
         }
-      } catch (IOException e) {
+      } catch (Exception e) {
         reportError(callback);
+      }
+    }
+
+    private void trustAllHosts() {
+      X509TrustManager easyTrustManager = new X509TrustManager() {
+        public void checkClientTrusted(
+                X509Certificate[] chain,
+                String authType) throws CertificateException {
+          // Oh, I am easy!
+        }
+        public void checkServerTrusted(
+                X509Certificate[] chain,
+                String authType) throws CertificateException {
+          // Oh, I am easy!
+        }
+        public X509Certificate[] getAcceptedIssuers() {
+          return null;
+        }
+      };
+
+      // Create a trust manager that does not validate certificate chains
+      TrustManager[] trustAllCerts = new TrustManager[] {easyTrustManager};
+      // Install the all-trusting trust manager
+      try {
+        SSLContext sc = SSLContext.getInstance("TLS");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+      } catch (Exception e) {
+        e.printStackTrace();
       }
     }
 
